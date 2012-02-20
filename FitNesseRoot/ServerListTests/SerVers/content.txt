@@ -1,0 +1,12 @@
+{{{
+ This page lists servers.
+ Any lines that start with alphanumeric characters are presumed to be servers.
+ Lines starting with '*' are presumed to be servers in use.
+ Lines starting with spaces may be used as comment lines.
+ Blank lines will be deleted.
+}}}
+127.0.0.1
+Testserver1
+Testserver2.automation-excellence.com
+192.168.0.4
+*192.168.0.2 Wed Jan 11 13:36:13 -0700 2012

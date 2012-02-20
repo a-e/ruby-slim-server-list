@@ -1,0 +1,31 @@
+This test verifies that Server List is working.  For complete verification, all steps should pass and both server lists should be the same after testing as they were before testing.
+
+!contents -R2 -g -p -f -h
+
+!define TEST_SYSTEM {slim}
+!define TEST_RUNNER {rubyslim}
+!define COMMAND_PATTERN {rubyslim}
+
+If you're using [[Bundler][http://gembundler.com]], you may need to change ''rubyslim'' to ''bundle exec rubyslim'' in the lines above.
+
+!|Import|
+|ServerList|
+
+|Script| Server list | ServerListTests.SerVers |
+| $HOST= | get last server |
+| get server | 127.0.0.1 |
+
+|Script| Server list | ServerListTests.MoreServers |
+| show | Get server |
+| push server | newServer |
+| Show | Get last server |
+| push server | junkServer |
+| Delete locked server | newServer |
+| Delete server | junkServer |
+
+|Script| Server list |  |
+| free all servers |
+
+|Script| Server list | ServerListTests.SerVers |
+| get server | 127.0.0.1 |
+| free server | 127.0.0.1 |
