@@ -78,7 +78,7 @@ class ServerList
 
   # Add a server to a list.
   def push_server(new_server)
-    raise "Invalid server name '#{new_server}'" if /^[^a-zA-Z0-9]| / === new_server
+    raise "Invalid server name '#{new_server}'" if /^[^!a-zA-Z0-9]/ === new_server
     edit_lines_in_file { |lines| lines.push(new_server) }
   end
 
@@ -91,9 +91,12 @@ class ServerList
   # So one can be sure which server is added and used;
   # unless two people use such a page at once.
   def pop_server
-    selected_server = get_server_by_algorithm { |l| [ l.last, '' ] }
-    @@locked_servers[@@last_fitnesse_path].delete(selected_server)
-    return selected_server
+    return get_server_by_algorithm(false) { |l| [ l.last, '' ] }
+  end
+
+  # Delete the first unused server from the list.  Allows a queue (fifo) instead of a stack (lifo).
+  def shift_server
+    return get_server_by_algorithm(false) { |l| [ l.first, '' ] }
   end
 
   # - Add the ability to delete a server from a list.
@@ -116,6 +119,12 @@ class ServerList
     return true
   end
   
+  # Delete all things that look like unlocked servers.
+  def delete_unlocked_servers
+    edit_lines_in_file { |lines| lines.reject! { |line| /^[!a-zA-Z0-9].*$/ === line } }
+    return true
+  end
+
   private
 
   # Continues initialize, setting up the private variables that make this work.
@@ -132,8 +141,8 @@ class ServerList
   # the page, and must choose one to return. The return value may be a
   # two-element array.  The first element, or the entire value, is the selected
   # server. The second is how the server should look when "locked".  If the
-  # locked version does not begin with '*' followed by the server name and a
-  # space, as the default does, then it will not be possible to "unlock" the
+  # locked version does not begin with '*' followed by the server name,
+  # as the default does, then it will not be possible to "unlock" the
   # server. Sometimes this is desirable, e.g. to delete the server.
   # Blank lines ("") will also be deleted.
   #
@@ -141,9 +150,9 @@ class ServerList
   # Get a random server, and lock it with a timestamp.
   # get_server_by_algorithm { |l| s=l[rand(l.length)]; [s, "*#{s} #{Time.now}"] }
   #
-  # Get the last server, and delete it!  (a.k.a. "pop" it.)
-  # get_server_by_algorithm { |l| [l.last, ''] }
-  def get_server_by_algorithm
+  # Get the last server, and delete it!  (a.k.a. "pop" it.)  And don't lock it.
+  # get_server_by_algorithm(false) { |l| [l.last, ''] }
+  def get_server_by_algorithm(lock=true)
     selected_server = nil
 
     edit_lines_in_file do |lines|
@@ -151,7 +160,13 @@ class ServerList
 
       # Find lines containing server hostnames or IPs.
       # Ports are also allowed, so this has to be pretty general.
-      lines.each { |line| available_servers.push(line) if /^[a-zA-Z0-9][^ \/]* *$/ === line }
+      if lock
+        # Get a server name without spaces.
+        lines.each { |line| available_servers.push(line) if /^[!a-zA-Z0-9][^ \/]* *$/ === line }
+      else
+        # Get a server name with spaces.  This can be almost anything, but can't and won't be locked.
+        lines.each { |line| available_servers.push(line) if /^[!a-zA-Z0-9].*$/ === line }
+      end
       raise "No servers found in #{@fitnesse_path}" unless available_servers.length > 0
 
       selected_server = yield available_servers
@@ -165,7 +180,7 @@ class ServerList
 
     selected_server = selected_server[0]
 
-    @@locked_servers[@@last_fitnesse_path].push(selected_server)
+    @@locked_servers[@@last_fitnesse_path].push(selected_server) if lock
 
     return selected_server
   end
